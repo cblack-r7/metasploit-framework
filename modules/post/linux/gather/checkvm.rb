@@ -30,8 +30,10 @@ class MetasploitModule < Msf::Post
     vm = nil
     dmi_info = nil
     ls_pci_data = nil
-
-    if is_root?
+    
+    if exists?("/sys/class/dmi/id/product_name")
+      dmi_info = read_file("/proc/scsi/scsi") rescue ""
+    elsif is_root? && dmi_info.nil?
       dmi_info = cmd_exec("/usr/sbin/dmidecode")
     end
 
@@ -53,8 +55,11 @@ class MetasploitModule < Msf::Post
 
     # Check Modules
     if not vm
-      loaded_modules = cmd_exec("/sbin/lsmod")
-      case loaded_modules.to_s.gsub("\n", " ")
+      loaded_module = ls("/sys/module/").join(" ")
+      if loaded_module?
+      	loaded_modules = cmd_exec("/sbin/lsmod").to_s.gsub("\n", " ")
+      end
+      case loaded_modules
       when /vboxsf|vboxguest/i
         vm = "VirtualBox"
       when /vmw_ballon|vmxnet|vmw/i
